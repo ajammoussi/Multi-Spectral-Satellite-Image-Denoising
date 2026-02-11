@@ -1,0 +1,26 @@
+# Deployment Configuration for ONNX Export
+
+model:
+  checkpoint_path: "./outputs/checkpoints/best_model.pth"
+  
+onnx:
+  output_path: "./outputs/onnx/satmae_denoiser.onnx"
+  opset_version: 14  # Compatible with most runtimes
+  
+  input_shape: [1, 13, 224, 224]  # [batch, channels, height, width]
+  
+  dynamic_axes:
+    noisy_image: 
+      0: "batch_size"
+    clean_image:
+      0: "batch_size"
+  
+  optimization:
+    do_constant_folding: true
+    use_int8_quantization: false  # Set true for edge deployment
+    
+inference:
+  runtime: "onnxruntime-gpu"  # or "onnxruntime" for CPU
+  batch_size: 1
+  warmup_runs: 10
+  benchmark_iterations: 100

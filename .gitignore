@@ -1,0 +1,90 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyTorch
+*.pth
+*.pt
+*.ckpt
+*.safetensors
+
+# Jupyter Notebook
+.ipynb_checkpoints
+*.ipynb_checkpoints/
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Data (Exclude large dataset files but keep structure)
+data/**/*.tif
+data/**/*.tiff
+data/**/*.h5
+data/**/*.hdf5
+data/**/*.zip
+!data/**/.gitkeep
+
+# Exclude complete dataset folder if too large
+# Uncomment to exclude entirely:
+# data/EuroSAT_MS/
+
+# Models & Outputs
+outputs/checkpoints/**/*.pth
+outputs/onnx/**/*.onnx
+outputs/logs/**/*.json
+outputs/logs/**/*.npz
+outputs/logs/**/*.log
+weights/**/*.pth
+weights/**/*.pt
+
+# Keep structure
+!outputs/checkpoints/.gitkeep
+!outputs/logs/.gitkeep
+!outputs/onnx/.gitkeep
+!weights/.gitkeep
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# MyPy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Documentation
+docs/_build/

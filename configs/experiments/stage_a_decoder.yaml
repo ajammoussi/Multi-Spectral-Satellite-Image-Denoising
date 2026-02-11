@@ -1,0 +1,68 @@
+# Stage A: Decoder Training (Two-Stage Strategy)
+# Train decoder only with frozen encoder - ~20-25 epochs
+
+# Inherits from: ../base.yaml
+# Purpose: Fast decoder convergence with high learning rate
+
+# Model Configuration
+model:
+  encoder:
+    freeze_layers: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]  # ALL encoder frozen
+    pretrained_path: "./weights/satmae_pretrain.pth"
+  decoder:
+    architecture: "unet_light"
+    channels: [384, 192, 96, 48]
+
+# Training Configuration
+training:
+  epochs: 25  # Decoder converges quickly
+  effective_batch_size: 64
+  micro_batch_size: 8
+  gradient_accumulation_steps: 8
+  
+  optimizer:
+    type: "AdamW"
+    lr: 1e-4  # Higher LR for decoder training
+    weight_decay: 0.05
+    betas: [0.9, 0.999]
+  
+  scheduler:
+    type: "CosineAnnealingWarmRestarts"
+    T_0: 10
+    T_mult: 2
+    eta_min: 1e-6
+  
+  mixed_precision: true
+  gradient_clip: 1.0
+  
+  loss:
+    mse_weight: 1.0
+    ssim_weight: 0.1
+
+# Checkpoint Configuration
+checkpoint:
+  save_every: 5
+  keep_top_k: 2
+  metric: "val_psnr"
+
+# Data Configuration (inherited from base)
+data:
+  root_dir: "./data/EuroSAT_MS"
+  num_bands: 13
+  image_size: 192
+  patch_size: 16
+  train_split: 0.8
+  num_workers: 0
+  pin_memory: true
+
+# Noise Configuration (inherited from base)
+noise:
+  gaussian_sigma: 0.015
+  speckle_sigma: 0.008
+  dead_band_prob: 0.08
+  thermal_noise_scale: 0.005
+
+# Hardware Configuration
+device: "cuda"
+max_vram_gb: 6
+seed: 42

@@ -1,0 +1,23 @@
+# High Noise Experiment Configuration
+# Extends base.yaml with severe corruption
+
+# Inherits from: ../base.yaml
+# Challenging restoration scenario
+
+noise:
+  gaussian_sigma: 0.035  # High thermal noise
+  speckle_sigma: 0.015   # High coherent noise
+  dead_band_prob: 0.15   # 15% dead bands
+  thermal_noise_scale: 0.01  # High thermal variation
+
+training:
+  epochs: 150  # Needs more training
+  optimizer:
+    lr: 5e-5  # Lower learning rate for stability
+  
+  loss:
+    mse_weight: 1.0
+    ssim_weight: 0.15  # Emphasize structure more
+    
+checkpoint:
+  metric: "val_loss"  # Focus on overall loss reduction

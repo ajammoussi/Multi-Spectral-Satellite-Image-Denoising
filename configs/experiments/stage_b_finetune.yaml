@@ -1,0 +1,75 @@
+# Stage B: Full Fine-Tuning (Two-Stage Strategy)
+# Fine-tune encoder + decoder together - ~30-40 epochs
+
+# Inherits from: ../base.yaml
+# Purpose: Refine encoder features for denoising while preserving pretrained knowledge
+# Prerequisite: Load checkpoint from Stage A (best_model_psnr.pth)
+
+# Model Configuration
+model:
+  encoder:
+    freeze_layers: [0, 1, 2, 3, 4, 5]  # Unfreeze last 6 blocks (6-11)
+    pretrained_path: null  # Don't reload pretrained - we're resuming from Stage A
+  decoder:
+    architecture: "unet_light"
+    channels: [384, 192, 96, 48]
+
+# Training Configuration
+training:
+  epochs: 30  # Fine-tune with lower LR
+  effective_batch_size: 64
+  micro_batch_size: 8
+  gradient_accumulation_steps: 8
+  
+  optimizer:
+    type: "AdamW"
+    lr: 1e-5  # Lower LR for stable fine-tuning
+    weight_decay: 0.05
+    betas: [0.9, 0.999]
+  
+  scheduler:
+    type: "CosineAnnealingWarmRestarts"
+    T_0: 10
+    T_mult: 2
+    eta_min: 1e-7  # Even lower minimum
+  
+  mixed_precision: true
+  gradient_clip: 1.0
+  
+  loss:
+    mse_weight: 1.0
+    ssim_weight: 0.1
+
+# Early Stopping Configuration
+early_stopping:
+  enabled: true
+  patience: 10  # Stop if no improvement for 10 epochs
+  min_delta: 0.1  # Minimum PSNR improvement (0.1 dB)
+
+# Checkpoint Configuration
+checkpoint:
+  save_every: 5
+  keep_top_k: 3
+  metric: "val_psnr"
+
+# Data Configuration (inherited from base)
+data:
+  root_dir: "./data/EuroSAT_MS"
+  num_bands: 13
+  image_size: 192
+  patch_size: 16
+  train_split: 0.8
+  num_workers: 0
+  pin_memory: true
+
+# Noise Configuration (inherited from base)
+noise:
+  gaussian_sigma: 0.015
+  speckle_sigma: 0.008
+  dead_band_prob: 0.08
+  thermal_noise_scale: 0.005
+
+# Hardware Configuration
+device: "cuda"
+max_vram_gb: 6
+seed: 42

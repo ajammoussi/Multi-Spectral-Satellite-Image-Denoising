@@ -1,0 +1,19 @@
+# Medium Noise Experiment Configuration
+# Extends base.yaml with moderate corruption
+
+# Inherits from: ../base.yaml
+# Standard training scenario
+
+noise:
+  gaussian_sigma: 0.015  # Moderate noise
+  speckle_sigma: 0.008   # Moderate coherent noise
+  dead_band_prob: 0.08   # 8% dead bands
+  thermal_noise_scale: 0.005  # Moderate thermal variation
+
+training:
+  epochs: 100
+  optimizer:
+    lr: 1e-4
+    
+checkpoint:
+  metric: "val_psnr"

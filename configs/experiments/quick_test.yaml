@@ -1,0 +1,68 @@
+# Quick Test Configuration
+# Fast sanity check - 5 epochs (~3-5 minutes)
+
+# Inherits from: ../base.yaml
+# Purpose: Verify training pipeline before full run
+
+# Training Configuration
+training:
+  epochs: 5  # Quick test only
+  effective_batch_size: 64
+  micro_batch_size: 8
+  gradient_accumulation_steps: 8
+  
+  optimizer:
+    type: "AdamW"
+    lr: 1e-4
+    weight_decay: 0.05
+    betas: [0.9, 0.999]
+  
+  scheduler:
+    type: "CosineAnnealingWarmRestarts"
+    T_0: 5
+    T_mult: 1
+    eta_min: 1e-6
+  
+  mixed_precision: true
+  gradient_clip: 1.0
+  
+  loss:
+    mse_weight: 1.0
+    ssim_weight: 0.1
+
+# Model Configuration (use base defaults)
+model:
+  encoder:
+    freeze_layers: [0, 1, 2, 3, 4, 5]  # Standard freezing
+    pretrained_path: "./weights/satmae_pretrain.pth"
+  decoder:
+    architecture: "unet_light"
+    channels: [384, 192, 96, 48]
+
+# Data Configuration
+data:
+  root_dir: "./data/EuroSAT_MS"
+  num_bands: 13
+  image_size: 192
+  patch_size: 16
+  train_split: 0.85  # Use more training data for quick test
+  num_workers: 0
+  pin_memory: true
+
+# Noise Configuration (same as base)
+noise:
+  gaussian_sigma: 0.015
+  speckle_sigma: 0.008
+  dead_band_prob: 0.08
+  thermal_noise_scale: 0.005
+
+# Checkpoint Configuration
+checkpoint:
+  save_every: 5
+  keep_top_k: 1
+  metric: "val_psnr"
+
+# Hardware Configuration
+device: "cuda"
+max_vram_gb: 6
+seed: 42

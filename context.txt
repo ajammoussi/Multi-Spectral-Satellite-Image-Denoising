@@ -1,0 +1,220 @@
+You are a Senior Computer Vision Engineer and MLOps Specialist. You are assisting a developer to complete a research-grade project on Multi-Spectral Satellite Image Denoising/Restoration.Project constraints:Hardware: NVIDIA GeForce RTX 4050 (6GB VRAM). This is a hard constraint. Code must be memory-efficient.Dataset: EuroSAT Multi-Spectral (13 bands).Method: Transfer Learning using a pre-trained SatMAE (Masked Autoencoder) ViT-Base encoder with agressive efficiency for RTX 4050 (| Technique                  | VRAM Savings           | Implementation                |
+| -------------------------- | ---------------------- | ----------------------------- |
+| **Gradient checkpointing** | ~30%                   | `torch.utils.checkpoint`      |
+| **Mixed precision (fp16)** | ~40%                   | `torch.cuda.amp.autocast()`   |
+| **Frozen encoder layers**  | ~50% trainable params  | `param.requires_grad = False` |
+| **Smaller patches**        | Linear savings         | 112×112 instead of 224×224    |
+| **Gradient accumulation**  | Effective larger batch | `accumulation_steps=4`        |
+), coupled with a lightweight robust CNN decoder.Task: The model must take inputs corrupted by Sensor Dropout (random dead bands) and Gaussian/Speckle noise, and reconstruct the clean multi-spectral signal.Framework: PyTorch (Training) -> ONNX (Deployment).Your Task:Generate a comprehensive Code Planning and Project Structure guide. The goal is to have a modular, professional repository structure that supports rapid experimentation and final deployment.1. Project Structure:Please define the directory tree. It must follow the modular style of the example below but adapted for Satellite Denoising.Example to emulate: 3d-pointcloud-analysis/ structure (configs, src, layers, etc.).Adaptations:Instead of point cloud models, use satmae_denoiser.Include a deployment-related code for ONNX export scripts and runtimes.Include notebooks/ for EDA and visualization.2. Detailed Component Specifications:For each major directory/file in your proposed structure, provide a summary of what it must contain and the logic behind it.configs/: Define a YAML structure that allows easy switching between noise_levels, masking_ratios, and learning_rates.src/data/:Explain how to write a custom Dataset class for EuroSAT (handling .tif files with 13 channels).Crucial: Define the AddSensorNoise transform class. It needs to simulate thermal noise and "dead band" artifacts (zeroing out specific channels).src/models/:Architecture: Define a class SatMAERestoration.Encoder: How to load SatMAE ViT-Base and handle non-standard channel counts (adapt input projection layer).Bottleneck: How to reshape ViT patch embeddings ($N \times L \times D$) back to spatial maps ($N \times C \times H \times W$).Decoder: A lightweight powerful CNN/U-Net decoder to upscale back to $224 \times 224$. Keep it small to fit in 6GB VRAM.src/training/:Must use Mixed Precision (AMP) (torch.cuda.amp).Must implement Gradient Accumulation to simulate batch sizes of 32/64 since the RTX 4050 can likely only handle batch size 8 or 16.Loss function: MSE + 0.1 * SSIM.deployment/:Provide the logic for exporting a ViT-based model to ONNX (handling dynamic axes).3. Implementation Roadmap (The "2-Day Plan"):Briefly list the order of operations for coding this to ensure it works.4. Code Snippets:Provide Python pseudo-code or skeleton code for:The SatMAERestoration model class (focusing on the reshaping from ViT to CNN).The AddSensorNoise transform.The train_step function showing AMP and Gradient Accumulation.Goal: The output should be a copy-paste ready blueprint that allows me to start coding immediately without running into VRAM issues or architectural mismatches.
+
+Epoch 1/25: 100%|██████████| 2700/2700 [22:16<00:00,  2.02it/s, loss=0.9946, lr=9.84e-06, vram=0.98GB]
+2026-02-10 18:48:37,251 - src.training.trainer - INFO - Epoch 1 Train: Loss=1.8342, PSNR=13.68dB, SSIM=0.3070
+2026-02-10 18:51:50,215 - src.training.trainer - INFO - Validation: Loss=1.1140, PSNR=15.69dB, SSIM=0.5329, SAM=28.45°
+2026-02-10 18:51:50,792 - src.training.trainer - INFO - Saved checkpoint to C:\Users\User\My Files\Tutorials\Deep Learning\Multi-Spectral-Satellite-Image-Denoising\outputs\checkpoints\stage_a\best_model_loss.pth
+2026-02-10 18:51:51,368 - src.training.trainer - INFO - New best model saved to C:\Users\User\My Files\Tutorials\Deep Learning\Multi-Spectral-Satellite-Image-Denoising\outputs\checkpoints\stage_a\best_model.pth
+2026-02-10 18:51:59,352 - src.training.trainer - INFO - Saved checkpoint to C:\Users\User\My Files\Tutorials\Deep Learning\Multi-Spectral-Satellite-Image-Denoising\outputs\checkpoints\stage_a\best_model_psnr.pth
+2026-02-10 18:52:05,685 - src.training.trainer - INFO - New best model saved to C:\Users\User\My Files\Tutorials\Deep Learning\Multi-Spectral-Satellite-Image-Denoising\outputs\checkpoints\stage_a\best_model.pth
+2026-02-10 18:52:05,788 - src.training.trainer - INFO - Epoch 2/25
+Epoch 2/25: 100%|██████████| 2700/2700 [41:36<00:00,  1.08it/s, loss=0.5398, lr=9.90e-06, vram=0.98GB]    
+2026-02-10 19:33:42,140 - src.training.trainer - INFO - Epoch 2 Train: Loss=0.7084, PSNR=17.53dB, SSIM=0.6798
+2026-02-10 19:36:52,611 - src.training.trainer - INFO - Validation: Loss=1.5875, PSNR=18.26dB, SSIM=0.7688, SAM=16.63°
+2026-02-10 19:36:53,320 - src.training.trainer - INFO - Saved checkpoint to C:\Users\User\My Files\Tutorials\Deep Learning\Multi-Spectral-Satellite-Image-Denoising\outputs\checkpoints\stage_a\best_model_loss.pth
+2026-02-10 19:36:53,906 - src.training.trainer - INFO - New best model saved to C:\Users\User\My Files\Tutorials\Deep Learning\Multi-Spectral-Satellite-Image-Denoising\outputs\checkpoints\stage_a\best_model.pth
+2026-02-10 19:36:54,504 - src.training.trainer - INFO - Saved checkpoint to C:\Users\User\My Files\Tutorials\Deep Learning\Multi-Spectral-Satellite-Image-Denoising\outputs\checkpoints\stage_a\best_model_psnr.pth
+2026-02-10 19:36:55,234 - src.training.trainer - INFO - New best model saved to C:\Users\User\My Files\Tutorials\Deep Learning\Multi-Spectral-Satellite-Image-Denoising\outputs\checkpoints\stage_a\best_model.pth
+2026-02-10 19:36:55,256 - src.training.trainer - INFO - Epoch 3/25
+Epoch 3/25: 100%|██████████| 2700/2700 [23:59<00:00,  1.88it/s, loss=0.2211, lr=4.17e-06, vram=0.98GB]
+2026-02-10 20:00:54,394 - src.training.trainer - INFO - Epoch 3 Train: Loss=0.3367, PSNR=20.86dB, SSIM=0.8393
+2026-02-10 20:04:11,211 - src.training.trainer - INFO - Validation: Loss=0.5134, PSNR=22.41dB, SSIM=0.9009, SAM=10.11°
+2026-02-10 20:04:11,740 - src.training.trainer - INFO - Saved checkpoint to C:\Users\User\My Files\Tutorials\Deep Learning\Multi-Spectral-Satellite-Image-Denoising\outputs\checkpoints\stage_a\best_model_loss.pth
+2026-02-10 20:04:12,297 - src.training.trainer - INFO - New best model saved to C:\Users\User\My Files\Tutorials\Deep Learning\Multi-Spectral-Satellite-Image-Denoising\outputs\checkpoints\stage_a\best_model.pth
+2026-02-10 20:04:12,829 - src.training.trainer - INFO - Saved checkpoint to C:\Users\User\My Files\Tutorials\Deep Learning\Multi-Spectral-Satellite-Image-Denoising\outputs\checkpoints\stage_a\best_model_psnr.pth
+2026-02-10 20:04:23,461 - src.training.trainer - INFO - New best model saved to C:\Users\User\My Files\Tutorials\Deep Learning\Multi-Spectral-Satellite-Image-Denoising\outputs\checkpoints\stage_a\best_model.pth
+2026-02-10 20:04:23,580 - src.training.trainer - INFO - Epoch 4/25
+Epoch 4/25: 100%|██████████| 2700/2700 [24:07<00:00,  1.87it/s, loss=0.1183, lr=9.92e-06, vram=0.98GB]
+2026-02-10 20:28:30,636 - src.training.trainer - INFO - Epoch 4 Train: Loss=0.1754, PSNR=23.57dB, SSIM=0.9085
+2026-02-10 20:30:52,037 - src.training.trainer - INFO - Validation: Loss=0.3823, PSNR=24.14dB, SSIM=0.9166, SAM=7.94°
+2026-02-10 20:30:52,413 - src.training.trainer - INFO - Saved checkpoint to C:\Users\User\My Files\Tutorials\Deep Learning\Multi-Spectral-Satellite-Image-Denoising\outputs\checkpoints\stage_a\best_model_loss.pth
+2026-02-10 20:30:52,822 - src.training.trainer - INFO - New best model saved to C:\Users\User\My Files\Tutorials\Deep Learning\Multi-Spectral-Satellite-Image-Denoising\outputs\checkpoints\stage_a\best_model.pth
+2026-02-10 20:31:02,956 - src.training.trainer - INFO - Saved checkpoint to C:\Users\User\My Files\Tutorials\Deep Learning\Multi-Spectral-Satellite-Image-Denoising\outputs\checkpoints\stage_a\best_model_psnr.pth
+2026-02-10 20:31:11,638 - src.training.trainer - INFO - New best model saved to C:\Users\User\My Files\Tutorials\Deep Learning\Multi-Spectral-Satellite-Image-Denoising\outputs\checkpoints\stage_a\best_model.pth
+2026-02-10 20:31:11,743 - src.training.trainer - INFO - Epoch 5/25
+Epoch 5/25: 100%|██████████| 2700/2700 [23:50<00:00,  1.89it/s, loss=0.0442, lr=7.86e-06, vram=0.98GB]
+2026-02-10 20:55:02,327 - src.training.trainer - INFO - Epoch 5 Train: Loss=0.0656, PSNR=28.36dB, SSIM=0.9470
+2026-02-10 20:58:13,376 - src.training.trainer - INFO - Validation: Loss=0.1699, PSNR=32.15dB, SSIM=0.9679, SAM=4.10°
+2026-02-10 20:58:13,918 - src.training.trainer - INFO - Saved checkpoint to C:\Users\User\My Files\Tutorials\Deep Learning\Multi-Spectral-Satellite-Image-Denoising\outputs\checkpoints\stage_a\best_model_loss.pth
+2026-02-10 20:58:14,836 - src.training.trainer - INFO - New best model saved to C:\Users\User\My Files\Tutorials\Deep Learning\Multi-Spectral-Satellite-Image-Denoising\outputs\checkpoints\stage_a\best_model.pth
+2026-02-10 20:58:15,462 - src.training.trainer - INFO - Saved checkpoint to C:\Users\User\My Files\Tutorials\Deep Learning\Multi-Spectral-Satellite-Image-Denoising\outputs\checkpoints\stage_a\best_model_psnr.pth
+2026-02-10 20:58:16,157 - src.training.trainer - INFO - New best model saved to C:\Users\User\My Files\Tutorials\Deep Learning\Multi-Spectral-Satellite-Image-Denoising\outputs\checkpoints\stage_a\best_model.pth
+2026-02-10 20:58:16,219 - src.training.trainer - INFO - Epoch 6/25
+Epoch 6/25: 100%|██████████| 2700/2700 [20:24<00:00,  2.20it/s, loss=0.0135, lr=4.28e-06, vram=0.98GB]
+2026-02-10 21:18:40,936 - src.training.trainer - INFO - Epoch 6 Train: Loss=0.0266, PSNR=32.55dB, SSIM=0.9662
+2026-02-10 21:20:54,751 - src.training.trainer - INFO - Validation: Loss=0.5383, PSNR=34.11dB, SSIM=0.9703, SAM=3.24°
+2026-02-10 21:20:55,159 - src.training.trainer - INFO - Saved checkpoint to C:\Users\User\My Files\Tutorials\Deep Learning\Multi-Spectral-Satellite-Image-Denoising\outputs\checkpoints\stage_a\best_model_loss.pth
+2026-02-10 21:20:55,561 - src.training.trainer - INFO - New best model saved to C:\Users\User\My Files\Tutorials\Deep Learning\Multi-Spectral-Satellite-Image-Denoising\outputs\checkpoints\stage_a\best_model.pth
+2026-02-10 21:20:56,036 - src.training.trainer - INFO - Saved checkpoint to C:\Users\User\My Files\Tutorials\Deep Learning\Multi-Spectral-Satellite-Image-Denoising\outputs\checkpoints\stage_a\best_model_psnr.pth
+2026-02-10 21:20:56,546 - src.training.trainer - INFO - New best model saved to C:\Users\User\My Files\Tutorials\Deep Learning\Multi-Spectral-Satellite-Image-Denoising\outputs\checkpoints\stage_a\best_model.pth
+2026-02-10 21:20:56,558 - src.training.trainer - INFO - Epoch 7/25
+Epoch 7/25: 100%|██████████| 2700/2700 [20:23<00:00,  2.21it/s, loss=0.0335, lr=1.49e-06, vram=0.98GB]
+2026-02-10 21:41:19,672 - src.training.trainer - INFO - Epoch 7 Train: Loss=0.0211, PSNR=33.56dB, SSIM=0.9691
+2026-02-10 21:43:21,432 - src.training.trainer - INFO - Validation: Loss=0.2084, PSNR=36.20dB, SSIM=0.9743, SAM=2.93°
+2026-02-10 21:43:21,829 - src.training.trainer - INFO - Saved checkpoint to C:\Users\User\My Files\Tutorials\Deep Learning\Multi-Spectral-Satellite-Image-Denoising\outputs\checkpoints\stage_a\best_model_loss.pth
+2026-02-10 21:43:22,225 - src.training.trainer - INFO - New best model saved to C:\Users\User\My Files\Tutorials\Deep Learning\Multi-Spectral-Satellite-Image-Denoising\outputs\checkpoints\stage_a\best_model.pth
+2026-02-10 21:43:22,627 - src.training.trainer - INFO - Saved checkpoint to C:\Users\User\My Files\Tutorials\Deep Learning\Multi-Spectral-Satellite-Image-Denoising\outputs\checkpoints\stage_a\best_model_psnr.pth
+2026-02-10 21:43:23,051 - src.training.trainer - INFO - New best model saved to C:\Users\User\My Files\Tutorials\Deep Learning\Multi-Spectral-Satellite-Image-Denoising\outputs\checkpoints\stage_a\best_model.pth
+2026-02-10 21:43:23,067 - src.training.trainer - INFO - Epoch 8/25
+Epoch 8/25: 100%|██████████| 2700/2700 [20:29<00:00,  2.20it/s, loss=0.0108, lr=9.93e-06, vram=0.98GB]
+2026-02-10 22:03:52,497 - src.training.trainer - INFO - Epoch 8 Train: Loss=0.0215, PSNR=33.61dB, SSIM=0.9683
+2026-02-10 22:06:02,316 - src.training.trainer - INFO - Validation: Loss=0.1691, PSNR=35.82dB, SSIM=0.9737, SAM=2.97°
+2026-02-10 22:06:02,723 - src.training.trainer - INFO - Saved checkpoint to C:\Users\User\My Files\Tutorials\Deep Learning\Multi-Spectral-Satellite-Image-Denoising\outputs\checkpoints\stage_a\best_model_loss.pth
+2026-02-10 22:06:03,122 - src.training.trainer - INFO - New best model saved to C:\Users\User\My Files\Tutorials\Deep Learning\Multi-Spectral-Satellite-Image-Denoising\outputs\checkpoints\stage_a\best_model.pth
+2026-02-10 22:06:03,136 - src.training.trainer - INFO - Epoch 9/25
+Epoch 9/25: 100%|██████████| 2700/2700 [20:24<00:00,  2.20it/s, loss=0.0298, lr=9.23e-06, vram=0.98GB]
+2026-02-10 22:26:28,094 - src.training.trainer - INFO - Epoch 9 Train: Loss=0.0191, PSNR=34.45dB, SSIM=0.9716
+2026-02-10 22:28:37,224 - src.training.trainer - INFO - Validation: Loss=0.0417, PSNR=35.45dB, SSIM=0.9743, SAM=3.18°
+2026-02-10 22:28:37,621 - src.training.trainer - INFO - Saved checkpoint to C:\Users\User\My Files\Tutorials\Deep Learning\Multi-Spectral-Satellite-Image-Denoising\outputs\checkpoints\stage_a\best_model_loss.pth
+2026-02-10 22:28:38,023 - src.training.trainer - INFO - New best model saved to C:\Users\User\My Files\Tutorials\Deep Learning\Multi-Spectral-Satellite-Image-Denoising\outputs\checkpoints\stage_a\best_model.pth
+2026-02-10 22:28:38,037 - src.training.trainer - INFO - Epoch 10/25
+Epoch 10/25: 100%|██████████| 2700/2700 [20:32<00:00,  2.19it/s, loss=0.0086, lr=7.91e-06, vram=0.98GB]
+2026-02-10 22:49:10,387 - src.training.trainer - INFO - Epoch 10 Train: Loss=0.0159, PSNR=35.18dB, SSIM=0.9743
+2026-02-10 22:52:24,934 - src.training.trainer - INFO - Validation: Loss=0.1001, PSNR=36.84dB, SSIM=0.9777, SAM=2.73°
+2026-02-10 22:52:25,555 - src.training.trainer - INFO - Saved checkpoint to C:\Users\User\My Files\Tutorials\Deep Learning\Multi-Spectral-Satellite-Image-Denoising\outputs\checkpoints\stage_a\best_model_loss.pth
+2026-02-10 22:52:26,147 - src.training.trainer - INFO - New best model saved to C:\Users\User\My Files\Tutorials\Deep Learning\Multi-Spectral-Satellite-Image-Denoising\outputs\checkpoints\stage_a\best_model.pth
+2026-02-10 22:52:26,768 - src.training.trainer - INFO - Saved checkpoint to C:\Users\User\My Files\Tutorials\Deep Learning\Multi-Spectral-Satellite-Image-Denoising\outputs\checkpoints\stage_a\best_model_psnr.pth
+2026-02-10 22:52:27,385 - src.training.trainer - INFO - New best model saved to C:\Users\User\My Files\Tutorials\Deep Learning\Multi-Spectral-Satellite-Image-Denoising\outputs\checkpoints\stage_a\best_model.pth
+2026-02-10 22:52:27,411 - src.training.trainer - INFO - Epoch 11/25
+Epoch 11/25: 100%|██████████| 2700/2700 [24:12<00:00,  1.86it/s, loss=0.0139, lr=6.18e-06, vram=0.98GB]
+2026-02-10 23:16:40,006 - src.training.trainer - INFO - Epoch 11 Train: Loss=0.0134, PSNR=35.99dB, SSIM=0.9767
+2026-02-10 23:19:55,640 - src.training.trainer - INFO - Validation: Loss=0.0659, PSNR=37.60dB, SSIM=0.9793, SAM=2.64°
+2026-02-10 23:19:56,274 - src.training.trainer - INFO - Saved checkpoint to C:\Users\User\My Files\Tutorials\Deep Learning\Multi-Spectral-Satellite-Image-Denoising\outputs\checkpoints\stage_a\best_model_loss.pth
+2026-02-10 23:19:56,895 - src.training.trainer - INFO - New best model saved to C:\Users\User\My Files\Tutorials\Deep Learning\Multi-Spectral-Satellite-Image-Denoising\outputs\checkpoints\stage_a\best_model.pth
+2026-02-10 23:19:57,502 - src.training.trainer - INFO - Saved checkpoint to C:\Users\User\My Files\Tutorials\Deep Learning\Multi-Spectral-Satellite-Image-Denoising\outputs\checkpoints\stage_a\best_model_psnr.pth
+2026-02-10 23:19:58,110 - src.training.trainer - INFO - New best model saved to C:\Users\User\My Files\Tutorials\Deep Learning\Multi-Spectral-Satellite-Image-Denoising\outputs\checkpoints\stage_a\best_model.pth
+2026-02-10 23:19:58,133 - src.training.trainer - INFO - Epoch 12/25
+Epoch 12/25: 100%|██████████| 2700/2700 [24:15<00:00,  1.85it/s, loss=0.0101, lr=4.33e-06, vram=0.98GB]
+2026-02-10 23:44:14,052 - src.training.trainer - INFO - Epoch 12 Train: Loss=0.0117, PSNR=36.45dB, SSIM=0.9783
+2026-02-10 23:47:31,832 - src.training.trainer - INFO - Validation: Loss=0.2459, PSNR=37.44dB, SSIM=0.9774, SAM=2.64°
+2026-02-10 23:47:32,406 - src.training.trainer - INFO - Saved checkpoint to C:\Users\User\My Files\Tutorials\Deep Learning\Multi-Spectral-Satellite-Image-Denoising\outputs\checkpoints\stage_a\best_model_loss.pth
+2026-02-10 23:47:32,976 - src.training.trainer - INFO - New best model saved to C:\Users\User\My Files\Tutorials\Deep Learning\Multi-Spectral-Satellite-Image-Denoising\outputs\checkpoints\stage_a\best_model.pth
+2026-02-10 23:47:32,997 - src.training.trainer - INFO - Epoch 13/25
+Epoch 13/25: 100%|██████████| 2700/2700 [24:20<00:00,  1.85it/s, loss=0.0101, lr=2.68e-06, vram=0.98GB]
+2026-02-11 00:11:53,678 - src.training.trainer - INFO - Epoch 13 Train: Loss=0.0110, PSNR=36.91dB, SSIM=0.9798
+2026-02-11 00:15:10,806 - src.training.trainer - INFO - Validation: Loss=0.0726, PSNR=38.30dB, SSIM=0.9811, SAM=2.54°
+2026-02-11 00:15:11,409 - src.training.trainer - INFO - Saved checkpoint to C:\Users\User\My Files\Tutorials\Deep Learning\Multi-Spectral-Satellite-Image-Denoising\outputs\checkpoints\stage_a\best_model_loss.pth
+2026-02-11 00:15:12,002 - src.training.trainer - INFO - New best model saved to C:\Users\User\My Files\Tutorials\Deep Learning\Multi-Spectral-Satellite-Image-Denoising\outputs\checkpoints\stage_a\best_model.pth
+2026-02-11 00:15:12,615 - src.training.trainer - INFO - Saved checkpoint to C:\Users\User\My Files\Tutorials\Deep Learning\Multi-Spectral-Satellite-Image-Denoising\outputs\checkpoints\stage_a\best_model_psnr.pth
+2026-02-11 00:15:13,244 - src.training.trainer - INFO - New best model saved to C:\Users\User\My Files\Tutorials\Deep Learning\Multi-Spectral-Satellite-Image-Denoising\outputs\checkpoints\stage_a\best_model.pth
+2026-02-11 00:15:13,271 - src.training.trainer - INFO - Epoch 14/25
+Epoch 14/25: 100%|██████████| 2700/2700 [22:07<00:00,  2.03it/s, loss=0.0109, lr=1.51e-06, vram=0.98GB]
+2026-02-11 00:37:21,028 - src.training.trainer - INFO - Epoch 14 Train: Loss=0.0103, PSNR=37.04dB, SSIM=0.9799
+2026-02-11 00:39:39,009 - src.training.trainer - INFO - Validation: Loss=0.0448, PSNR=38.69dB, SSIM=0.9828, SAM=2.51°
+2026-02-11 00:39:39,418 - src.training.trainer - INFO - Saved checkpoint to C:\Users\User\My Files\Tutorials\Deep Learning\Multi-Spectral-Satellite-Image-Denoising\outputs\checkpoints\stage_a\best_model_loss.pth
+2026-02-11 00:39:40,138 - src.training.trainer - INFO - New best model saved to C:\Users\User\My Files\Tutorials\Deep Learning\Multi-Spectral-Satellite-Image-Denoising\outputs\checkpoints\stage_a\best_model.pth
+2026-02-11 00:39:40,544 - src.training.trainer - INFO - Saved checkpoint to C:\Users\User\My Files\Tutorials\Deep Learning\Multi-Spectral-Satellite-Image-Denoising\outputs\checkpoints\stage_a\best_model_psnr.pth
+2026-02-11 00:39:40,963 - src.training.trainer - INFO - New best model saved to C:\Users\User\My Files\Tutorials\Deep Learning\Multi-Spectral-Satellite-Image-Denoising\outputs\checkpoints\stage_a\best_model.pth
+2026-02-11 00:39:40,978 - src.training.trainer - INFO - Epoch 15/25
+Epoch 15/25: 100%|██████████| 2700/2700 [21:11<00:00,  2.12it/s, loss=0.0157, lr=1.01e-06, vram=0.98GB]
+2026-02-11 01:00:52,115 - src.training.trainer - INFO - Epoch 15 Train: Loss=0.0102, PSNR=37.15dB, SSIM=0.9807
+2026-02-11 01:03:07,852 - src.training.trainer - INFO - Validation: Loss=0.3747, PSNR=37.43dB, SSIM=0.9766, SAM=2.65°
+2026-02-11 01:03:08,272 - src.training.trainer - INFO - Saved checkpoint to C:\Users\User\My Files\Tutorials\Deep Learning\Multi-Spectral-Satellite-Image-Denoising\outputs\checkpoints\stage_a\best_model_loss.pth
+2026-02-11 01:03:08,932 - src.training.trainer - INFO - New best model saved to C:\Users\User\My Files\Tutorials\Deep Learning\Multi-Spectral-Satellite-Image-Denoising\outputs\checkpoints\stage_a\best_model.pth
+
+
+
+
+
+Epoch 1/30: 100%|██████████| 2700/2700 [21:21<00:00,  2.11it/s, loss=0.0053, lr=9.84e-07, vram=3.01GB]
+2026-02-11 06:32:15,543 - src.training.trainer - INFO - Epoch 1 Train: Loss=0.0058, PSNR=39.56dB, SSIM=0.9859
+2026-02-11 06:34:13,440 - src.training.trainer - INFO - Validation: Loss=0.0436, PSNR=40.05dB, SSIM=0.9832, SAM=2.03°
+2026-02-11 06:34:14,049 - src.training.trainer - INFO - Saved checkpoint to C:\Users\User\My Files\Tutorials\Deep Learning\Multi-Spectral-Satellite-Image-Denoising\outputs\checkpoints\stage_b\best_model_loss.pth
+2026-02-11 06:34:15,225 - src.training.trainer - INFO - New best model saved to C:\Users\User\My Files\Tutorials\Deep Learning\Multi-Spectral-Satellite-Image-Denoising\outputs\checkpoints\stage_b\best_model.pth
+2026-02-11 06:34:16,283 - src.training.trainer - INFO - Saved checkpoint to C:\Users\User\My Files\Tutorials\Deep Learning\Multi-Spectral-Satellite-Image-Denoising\outputs\checkpoints\stage_b\best_model_psnr.pth
+2026-02-11 06:34:17,041 - src.training.trainer - INFO - New best model saved to C:\Users\User\My Files\Tutorials\Deep Learning\Multi-Spectral-Satellite-Image-Denoising\outputs\checkpoints\stage_b\best_model.pth
+2026-02-11 06:34:17,042 - src.training.trainer - INFO - Early stopping: improvement of 40.051 dB, resetting counter
+2026-02-11 06:34:17,054 - src.training.trainer - INFO - Epoch 2/30
+Epoch 2/30: 100%|██████████| 2700/2700 [20:44<00:00,  2.17it/s, loss=0.0042, lr=9.90e-07, vram=3.01GB]
+2026-02-11 06:55:01,755 - src.training.trainer - INFO - Epoch 2 Train: Loss=0.0056, PSNR=39.70dB, SSIM=0.9861
+2026-02-11 06:56:59,319 - src.training.trainer - INFO - Validation: Loss=0.0754, PSNR=39.78dB, SSIM=0.9810, SAM=2.07°
+2026-02-11 06:56:59,964 - src.training.trainer - INFO - Saved checkpoint to C:\Users\User\My Files\Tutorials\Deep Learning\Multi-Spectral-Satellite-Image-Denoising\outputs\checkpoints\stage_b\best_model_loss.pth
+2026-02-11 06:57:01,027 - src.training.trainer - INFO - New best model saved to C:\Users\User\My Files\Tutorials\Deep Learning\Multi-Spectral-Satellite-Image-Denoising\outputs\checkpoints\stage_b\best_model.pth
+2026-02-11 06:57:01,028 - src.training.trainer - INFO - Early stopping: no improvement for 1/10 epochs (best: 40.05 dB, current: 39.78 dB)
+2026-02-11 06:57:01,043 - src.training.trainer - INFO - Epoch 3/30
+Epoch 3/30: 100%|██████████| 2700/2700 [20:44<00:00,  2.17it/s, loss=0.0087, lr=4.17e-07, vram=3.01GB]
+2026-02-11 07:17:45,664 - src.training.trainer - INFO - Epoch 3 Train: Loss=0.0057, PSNR=39.85dB, SSIM=0.9865
+2026-02-11 07:19:43,819 - src.training.trainer - INFO - Validation: Loss=0.0166, PSNR=40.73dB, SSIM=0.9853, SAM=1.98°
+2026-02-11 07:19:44,481 - src.training.trainer - INFO - Saved checkpoint to C:\Users\User\My Files\Tutorials\Deep Learning\Multi-Spectral-Satellite-Image-Denoising\outputs\checkpoints\stage_b\best_model_loss.pth
+2026-02-11 07:19:45,558 - src.training.trainer - INFO - New best model saved to C:\Users\User\My Files\Tutorials\Deep Learning\Multi-Spectral-Satellite-Image-Denoising\outputs\checkpoints\stage_b\best_model.pth
+2026-02-11 07:19:46,606 - src.training.trainer - INFO - Saved checkpoint to C:\Users\User\My Files\Tutorials\Deep Learning\Multi-Spectral-Satellite-Image-Denoising\outputs\checkpoints\stage_b\best_model_psnr.pth
+2026-02-11 07:19:48,085 - src.training.trainer - INFO - New best model saved to C:\Users\User\My Files\Tutorials\Deep Learning\Multi-Spectral-Satellite-Image-Denoising\outputs\checkpoints\stage_b\best_model.pth
+2026-02-11 07:19:48,085 - src.training.trainer - INFO - Early stopping: improvement of 0.679 dB, resetting counter
+2026-02-11 07:19:48,168 - src.training.trainer - INFO - Epoch 4/30
+Epoch 4/30: 100%|██████████| 2700/2700 [20:46<00:00,  2.17it/s, loss=0.0035, lr=9.92e-07, vram=3.01GB]
+2026-02-11 07:40:34,748 - src.training.trainer - INFO - Epoch 4 Train: Loss=0.0055, PSNR=39.94dB, SSIM=0.9864
+2026-02-11 07:42:33,811 - src.training.trainer - INFO - Validation: Loss=0.0168, PSNR=40.60dB, SSIM=0.9851, SAM=1.96°
+2026-02-11 07:42:34,455 - src.training.trainer - INFO - Saved checkpoint to C:\Users\User\My Files\Tutorials\Deep Learning\Multi-Spectral-Satellite-Image-Denoising\outputs\checkpoints\stage_b\best_model_loss.pth
+2026-02-11 07:42:35,539 - src.training.trainer - INFO - New best model saved to C:\Users\User\My Files\Tutorials\Deep Learning\Multi-Spectral-Satellite-Image-Denoising\outputs\checkpoints\stage_b\best_model.pth
+2026-02-11 07:42:35,541 - src.training.trainer - INFO - Early stopping: no improvement for 1/10 epochs (best: 40.73 dB, current: 40.60 dB)
+2026-02-11 07:42:35,553 - src.training.trainer - INFO - Epoch 5/30
+Epoch 5/30: 100%|██████████| 2700/2700 [20:47<00:00,  2.16it/s, loss=0.0050, lr=7.86e-07, vram=3.01GB]
+2026-02-11 08:03:23,506 - src.training.trainer - INFO - Epoch 5 Train: Loss=0.0055, PSNR=39.72dB, SSIM=0.9862
+2026-02-11 08:05:23,745 - src.training.trainer - INFO - Validation: Loss=0.0241, PSNR=40.61dB, SSIM=0.9851, SAM=1.99°
+2026-02-11 08:05:24,406 - src.training.trainer - INFO - Saved checkpoint to C:\Users\User\My Files\Tutorials\Deep Learning\Multi-Spectral-Satellite-Image-Denoising\outputs\checkpoints\stage_b\best_model_loss.pth
+2026-02-11 08:05:25,469 - src.training.trainer - INFO - New best model saved to C:\Users\User\My Files\Tutorials\Deep Learning\Multi-Spectral-Satellite-Image-Denoising\outputs\checkpoints\stage_b\best_model.pth
+2026-02-11 08:05:25,469 - src.training.trainer - INFO - Early stopping: no improvement for 2/10 epochs (best: 40.73 dB, current: 40.61 dB)
+2026-02-11 08:05:25,490 - src.training.trainer - INFO - Epoch 6/30
+Epoch 6/30: 100%|██████████| 2700/2700 [20:45<00:00,  2.17it/s, loss=0.0032, lr=4.28e-07, vram=3.01GB]
+2026-02-11 08:26:11,495 - src.training.trainer - INFO - Epoch 6 Train: Loss=0.0054, PSNR=39.89dB, SSIM=0.9865
+2026-02-11 08:28:11,674 - src.training.trainer - INFO - Validation: Loss=0.1016, PSNR=39.59dB, SSIM=0.9789, SAM=2.13°
+2026-02-11 08:28:12,359 - src.training.trainer - INFO - Saved checkpoint to C:\Users\User\My Files\Tutorials\Deep Learning\Multi-Spectral-Satellite-Image-Denoising\outputs\checkpoints\stage_b\best_model_loss.pth
+2026-02-11 08:28:13,008 - src.training.trainer - INFO - New best model saved to C:\Users\User\My Files\Tutorials\Deep Learning\Multi-Spectral-Satellite-Image-Denoising\outputs\checkpoints\stage_b\best_model.pth
+2026-02-11 08:28:13,012 - src.training.trainer - INFO - Early stopping: no improvement for 3/10 epochs (best: 40.73 dB, current: 39.59 dB)
+2026-02-11 08:28:13,024 - src.training.trainer - INFO - Epoch 7/30
+Epoch 7/30: 100%|██████████| 2700/2700 [20:52<00:00,  2.16it/s, loss=0.0097, lr=1.49e-07, vram=3.01GB]
+2026-02-11 08:49:05,222 - src.training.trainer - INFO - Epoch 7 Train: Loss=0.0054, PSNR=39.90dB, SSIM=0.9866
+2026-02-11 08:51:34,108 - src.training.trainer - INFO - Validation: Loss=0.0178, PSNR=40.83dB, SSIM=0.9859, SAM=1.97°
+2026-02-11 08:51:34,798 - src.training.trainer - INFO - Saved checkpoint to C:\Users\User\My Files\Tutorials\Deep Learning\Multi-Spectral-Satellite-Image-Denoising\outputs\checkpoints\stage_b\best_model_loss.pth
+2026-02-11 08:51:35,467 - src.training.trainer - INFO - New best model saved to C:\Users\User\My Files\Tutorials\Deep Learning\Multi-Spectral-Satellite-Image-Denoising\outputs\checkpoints\stage_b\best_model.pth
+2026-02-11 08:51:36,168 - src.training.trainer - INFO - Saved checkpoint to C:\Users\User\My Files\Tutorials\Deep Learning\Multi-Spectral-Satellite-Image-Denoising\outputs\checkpoints\stage_b\best_model_psnr.pth
+2026-02-11 08:51:36,939 - src.training.trainer - INFO - New best model saved to C:\Users\User\My Files\Tutorials\Deep Learning\Multi-Spectral-Satellite-Image-Denoising\outputs\checkpoints\stage_b\best_model.pth
+2026-02-11 08:51:36,942 - src.training.trainer - INFO - Early stopping: no improvement for 4/10 epochs (best: 40.73 dB, current: 40.83 dB)
+2026-02-11 08:51:36,957 - src.training.trainer - INFO - Epoch 8/30
+Epoch 8/30: 100%|██████████| 2700/2700 [21:24<00:00,  2.10it/s, loss=0.0060, lr=9.93e-07, vram=3.01GB]
+2026-02-11 09:13:01,832 - src.training.trainer - INFO - Epoch 8 Train: Loss=0.0054, PSNR=39.82dB, SSIM=0.9865
+2026-02-11 09:15:02,564 - src.training.trainer - INFO - Validation: Loss=0.0470, PSNR=40.40dB, SSIM=0.9834, SAM=2.01°
+2026-02-11 09:15:03,226 - src.training.trainer - INFO - Saved checkpoint to C:\Users\User\My Files\Tutorials\Deep Learning\Multi-Spectral-Satellite-Image-Denoising\outputs\checkpoints\stage_b\best_model_loss.pth
+2026-02-11 09:15:04,484 - src.training.trainer - INFO - New best model saved to C:\Users\User\My Files\Tutorials\Deep Learning\Multi-Spectral-Satellite-Image-Denoising\outputs\checkpoints\stage_b\best_model.pth
+2026-02-11 09:15:04,488 - src.training.trainer - INFO - Early stopping: no improvement for 5/10 epochs (best: 40.73 dB, current: 40.40 dB)
+2026-02-11 09:15:04,501 - src.training.trainer - INFO - Epoch 9/30
+Epoch 9/30: 100%|██████████| 2700/2700 [20:54<00:00,  2.15it/s, loss=0.0056, lr=9.23e-07, vram=3.01GB]
+2026-02-11 09:35:58,871 - src.training.trainer - INFO - Epoch 9 Train: Loss=0.0054, PSNR=40.04dB, SSIM=0.9866
+2026-02-11 09:38:00,429 - src.training.trainer - INFO - Validation: Loss=0.0428, PSNR=40.44dB, SSIM=0.9835, SAM=1.99°
+2026-02-11 09:38:01,083 - src.training.trainer - INFO - Saved checkpoint to C:\Users\User\My Files\Tutorials\Deep Learning\Multi-Spectral-Satellite-Image-Denoising\outputs\checkpoints\stage_b\best_model_loss.pth
+2026-02-11 09:38:01,736 - src.training.trainer - INFO - New best model saved to C:\Users\User\My Files\Tutorials\Deep Learning\Multi-Spectral-Satellite-Image-Denoising\outputs\checkpoints\stage_b\best_model.pth
+2026-02-11 09:38:01,739 - src.training.trainer - INFO - Early stopping: no improvement for 6/10 epochs (best: 40.73 dB, current: 40.44 dB)
+2026-02-11 09:38:01,755 - src.training.trainer - INFO - Epoch 10/30
+Epoch 10/30: 100%|██████████| 2700/2700 [20:59<00:00,  2.14it/s, loss=0.0096, lr=7.91e-07, vram=3.01GB]
+2026-02-11 09:59:00,904 - src.training.trainer - INFO - Epoch 10 Train: Loss=0.0052, PSNR=40.07dB, SSIM=0.9868
+2026-02-11 10:01:14,016 - src.training.trainer - INFO - Validation: Loss=0.0142, PSNR=41.04dB, SSIM=0.9865, SAM=1.93°
+2026-02-11 10:01:14,683 - src.training.trainer - INFO - Saved checkpoint to C:\Users\User\My Files\Tutorials\Deep Learning\Multi-Spectral-Satellite-Image-Denoising\outputs\checkpoints\stage_b\best_model_loss.pth
+2026-02-11 10:01:15,395 - src.training.trainer - INFO - New best model saved to C:\Users\User\My Files\Tutorials\Deep Learning\Multi-Spectral-Satellite-Image-Denoising\outputs\checkpoints\stage_b\best_model.pth
+2026-02-11 10:01:16,114 - src.training.trainer - INFO - Saved checkpoint to C:\Users\User\My Files\Tutorials\Deep Learning\Multi-Spectral-Satellite-Image-Denoising\outputs\checkpoints\stage_b\best_model_psnr.pth
+2026-02-11 10:01:18,856 - src.training.trainer - INFO - New best model saved to C:\Users\User\My Files\Tutorials\Deep Learning\Multi-Spectral-Satellite-Image-Denoising\outputs\checkpoints\stage_b\best_model.pth
+2026-02-11 10:01:18,860 - src.training.trainer - INFO - Early stopping: improvement of 0.310 dB, resetting counter
+2026-02-11 10:01:18,920 - src.training.trainer - INFO - Epoch 11/30
+Epoch 11/30: 100%|██████████| 2700/2700 [20:57<00:00,  2.15it/s, loss=0.0041, lr=6.18e-07, vram=3.01GB]
+2026-02-11 10:22:16,731 - src.training.trainer - INFO - Epoch 11 Train: Loss=0.0052, PSNR=40.00dB, SSIM=0.9871
+2026-02-11 10:24:23,635 - src.training.trainer - INFO - Validation: Loss=0.0592, PSNR=40.26dB, SSIM=0.9832, SAM=2.01°
+2026-02-11 10:24:24,300 - src.training.trainer - INFO - Saved checkpoint to C:\Users\User\My Files\Tutorials\Deep Learning\Multi-Spectral-Satellite-Image-Denoising\outputs\checkpoints\stage_b\best_model_loss.pth
+2026-02-11 10:24:24,972 - src.training.trainer - INFO - New best model saved to C:\Users\User\My Files\Tutorials\Deep Learning\Multi-Spectral-Satellite-Image-Denoising\outputs\checkpoints\stage_b\best_model.pth
+2026-02-11 10:24:24,976 - src.training.trainer - INFO - Early stopping: no improvement for 1/10 epochs (best: 41.04 dB, current: 40.26 dB)
+2026-02-11 10:24:24,994 - src.training.trainer - INFO - Epoch 12/30
+Epoch 12/30: 100%|██████████| 2700/2700 [21:00<00:00,  2.14it/s, loss=0.0049, lr=4.33e-07, vram=3.01GB]
+2026-02-11 10:45:25,046 - src.training.trainer - INFO - Epoch 12 Train: Loss=0.0051, PSNR=40.14dB, SSIM=0.9869
+2026-02-11 10:47:33,593 - src.training.trainer - INFO - Validation: Loss=0.0168, PSNR=41.18dB, SSIM=0.9863, SAM=1.89°
+2026-02-11 10:47:34,245 - src.training.trainer - INFO - Saved checkpoint to C:\Users\User\My Files\Tutorials\Deep Learning\Multi-Spectral-Satellite-Image-Denoising\outputs\checkpoints\stage_b\best_model_loss.pth
+2026-02-11 10:47:34,990 - src.training.trainer - INFO - New best model saved to C:\Users\User\My Files\Tutorials\Deep Learning\Multi-Spectral-Satellite-Image-Denoising\outputs\checkpoints\stage_b\best_model.pth
+2026-02-11 10:47:35,667 - src.training.trainer - INFO - Saved checkpoint to C:\Users\User\My Files\Tutorials\Deep Learning\Multi-Spectral-Satellite-Image-Denoising\outputs\checkpoints\stage_b\best_model_psnr.pth
+2026-02-11 10:47:57,435 - src.training.trainer - INFO - New best model saved to C:\Users\User\My Files\Tutorials\Deep Learning\Multi-Spectral-Satellite-Image-Denoising\outputs\checkpoints\stage_b\best_model.pth
+2026-02-11 10:47:57,440 - src.training.trainer - INFO - Early stopping: improvement of 0.135 dB, resetting counter
+2026-02-11 10:47:57,550 - src.training.trainer - INFO - Epoch 13/30
+Epoch 13/30:   3%|▎         | 80/2700 [00:37<20:36,  2.12it/s, loss=0.0068, lr=4.28e-07, vram=2.79GB]

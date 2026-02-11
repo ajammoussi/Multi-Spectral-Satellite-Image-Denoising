@@ -1,0 +1,17 @@
+# Low Noise Experiment Configuration
+# Extends base.yaml with minimal corruption
+
+# Inherits from: ../base.yaml
+# Override noise parameters for low corruption scenario
+
+noise:
+  gaussian_sigma: 0.005  # Very low thermal noise
+  speckle_sigma: 0.003   # Minimal coherent noise
+  dead_band_prob: 0.02   # 2% dead bands
+  thermal_noise_scale: 0.002  # Minimal thermal variation
+
+training:
+  epochs: 50  # Faster convergence expected
+  
+checkpoint:
+  metric: "val_ssim"  # Focus on structural quality
