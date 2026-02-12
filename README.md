@@ -46,7 +46,7 @@ After 48 epochs of training on NVIDIA RTX 4050:
 
 ### Visual Results
 
-![Restoration Results](output.png)
+![Restoration Results](assets/output.png)
 
 The model successfully restores spectral information with high fidelity. However, some visual artifacts are present in edge regions due to the upscaling process (64px→192px) and MSE-based loss function. See [Known Limitations](#known-limitations) for details.
 
